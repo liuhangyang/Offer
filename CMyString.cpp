@@ -7,25 +7,18 @@
 
 #include<iostream>
 #include<string.h>
-/*定义一个赋值运算符的时候,应该注意的点:
- *1.是否把返回值声明为该类型的引用,并在函数结束前返回实例自身的引用,只有返回一个引用,才可以允许连续赋值,假设有3个CMyString的对象:str1,str2,str3，在程序中语句str1=str2=str3将不能通过编译. 
- *2.把传入的参数的类型应该申明为常量的引用,如果传入的参数不是引用而是实例,那么从形参到实例将会调用一次赋值构造函数,把参数申明为引用类型可以避免这样的无谓消耗,能提高代码的效率,同时,我们在赋值运算符函数内不会改变传入实例的状态,因此应该为传入的引用参数加上const关键字.  
- *3.是否释放实例自身已有的内存,如果我们忘记在分配新内存之前释放自身已有的空间,程序将出现内存泄露. 
- *4.是否判断传入的参数和当前的实例(*this)是不是同一个实例,如果是同一个,则不进行赋值惭怍,直接返回,如果事先不进行判断就进行赋值,那么在释放实例自身内存时就会释放传入参数的内存,因此就再也找不到要赋值的内容了.  
- *
- */
 class CMyString{
 public:
-    CMyString(char * pData = NULL){
-        m_pData = new char(strlen(pData)+1);
+    CMyString(char * pData){
+        m_pData = new char[1024];
         strcpy(m_pData,pData);
     }
     CMyString(const CMyString& str); //拷贝构造函数
     CMyString& operator=(const CMyString& str);
     ~CMyString(void){
+        std::cout << "调用析构函数"<<std::endl;
         delete[] m_pData;
     }
-private:
     char* m_pData;
 };
 CMyString::CMyString(const CMyString& str){
@@ -34,14 +27,26 @@ CMyString::CMyString(const CMyString& str){
     strcpy(m_pData,str.m_pData);
 }
 CMyString& CMyString::operator=(const CMyString& str){
-    if(this == &str){
+  /*问题1.如果new char分配失败时，m_pData将是一个空指针,这将非常危险. 
+   *解决方法:1.先new char 在执行delete .
+   *2.申请一个临时对象strTemp.m_pData和实例自身的m_pData做交换，由于strTemp是一个临时变量,出作用域后，自动调用strTemp的析构函数. 
+   */
+  /*if(this == &str){
         return *this;
     }
-
+    std::cout << "我是赋值运算符"<<std::endl;
     delete []m_pData;
     m_pData = NULL;
     m_pData = new char[strlen(str.m_pData)+1];
     strcpy(m_pData,str.m_pData);
+    return *this;*/
+    if(this != &str){
+    std::cout << "我是赋值运算符"<<std::endl;
+        CMyString strTemp(str);
+        char *temp = strTemp.m_pData;
+        strTemp.m_pData = m_pData;
+        m_pData = temp;
+    }
     return *this;
 }
 int main(int argc,char *argv[])
@@ -50,8 +55,11 @@ int main(int argc,char *argv[])
     CMyString a(buf);
     //a.m_pData = new char[10];
     //a.m_pData
-    CMyString b(a);
-    
-    
+    //CMyString b(a);
+    CMyString b("sss");
+    CMyString c("sss");
+    c=b=a;
+    std::cout << b.m_pData<<std::endl;
+
    return 0;
 }
